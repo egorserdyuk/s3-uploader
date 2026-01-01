@@ -54,12 +54,9 @@ class S3Uploader:
         """Load credentials from JSON file"""
         try:
             if not os.path.exists(self.creds_file):
-                logger.error(f"Credentials file not found: {self.creds_file}")
-                print(f"{Fore.RED}Error: Credentials file not found: {self.creds_file}")
-                print(
-                    f"{Fore.YELLOW}Please create a {self.creds_file} file with your S3 credentials.",
-                )
-                sys.exit(1)
+                print(f"{Fore.YELLOW}Credentials file not found: {self.creds_file}")
+                self._create_credentials_interactively()
+                return
 
             with open(self.creds_file) as f:
                 self.credentials = json.load(f)
@@ -80,6 +77,9 @@ class S3Uploader:
                 print(
                     f"{Fore.RED}Error: Missing required fields in credentials: {missing_fields}",
                 )
+                print(
+                    f"{Fore.YELLOW}Please update your {self.creds_file} file or delete it to recreate interactively."
+                )
                 sys.exit(1)
 
             logger.info("Credentials loaded successfully")
@@ -87,10 +87,66 @@ class S3Uploader:
         except json.JSONDecodeError as e:
             logger.error(f"Invalid JSON in credentials file: {e}")
             print(f"{Fore.RED}Error: Invalid JSON in credentials file: {e}")
+            print(
+                f"{Fore.YELLOW}Please delete {self.creds_file} and restart to recreate it."
+            )
             sys.exit(1)
         except Exception as e:
             logger.error(f"Error loading credentials: {e}")
             print(f"{Fore.RED}Error loading credentials: {e}")
+            sys.exit(1)
+
+    def _create_credentials_interactively(self) -> None:
+        """Create credentials file interactively"""
+        print(f"{Fore.CYAN}Let's set up your S3 credentials.")
+        print(f"{Fore.YELLOW}Press Enter to skip optional fields.")
+
+        credentials = {}
+
+        # Get required fields
+        while True:
+            aws_access_key = input(f"{Fore.CYAN}Enter your AWS Access Key ID: ").strip()
+            if aws_access_key:
+                credentials["aws_access_key_id"] = aws_access_key
+                break
+            print(f"{Fore.RED}Access Key ID is required.")
+
+        while True:
+            aws_secret_key = input(
+                f"{Fore.CYAN}Enter your AWS Secret Access Key: "
+            ).strip()
+            if aws_secret_key:
+                credentials["aws_secret_access_key"] = aws_secret_key
+                break
+            print(f"{Fore.RED}Secret Access Key is required.")
+
+        while True:
+            region = input(
+                f"{Fore.CYAN}Enter your AWS region (e.g., us-east-1): "
+            ).strip()
+            if region:
+                credentials["region_name"] = region
+                break
+            print(f"{Fore.RED}Region is required.")
+
+        # Get optional fields
+        endpoint = input(
+            f"{Fore.CYAN}Enter custom S3 endpoint URL (optional, for services like MinIO): "
+        ).strip()
+        if endpoint:
+            credentials["endpoint_url"] = endpoint
+
+        # Save credentials
+        try:
+            with open(self.creds_file, "w") as f:
+                json.dump(credentials, f, indent=2)
+
+            print(f"{Fore.GREEN}✓ Credentials saved to {self.creds_file}")
+            logger.info(f"Credentials file created: {self.creds_file}")
+
+        except Exception as e:
+            logger.error(f"Error saving credentials: {e}")
+            print(f"{Fore.RED}Error saving credentials: {e}")
             sys.exit(1)
 
     def _connect_to_s3(self) -> None:
