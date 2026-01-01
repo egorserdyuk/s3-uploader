@@ -51,15 +51,21 @@ class BuildConfig:
 
 def check_dependencies() -> None:
     """Check if required dependencies are installed"""
+    # Check if pyinstaller command is available
     try:
-        import pyinstaller
-
-        print(f"{Fore.GREEN}✓ PyInstaller is installed")
-    except ImportError:
+        result = subprocess.run(
+            ["pyinstaller", "--version"], capture_output=True, text=True
+        )
+        if result.returncode == 0:
+            print(f"{Fore.GREEN}✓ PyInstaller is installed")
+        else:
+            raise Exception("PyInstaller command failed")
+    except (FileNotFoundError, Exception):
         print(f"{Fore.RED}✗ PyInstaller is not installed")
         print("Install it with: pip install pyinstaller")
         sys.exit(1)
 
+    # Check if boto3 is available
     try:
         import boto3
 
@@ -100,9 +106,7 @@ a = Analysis(
     ['s3_uploader.py'],
     pathex=[],
     binaries=[],
-    datas=[
-        ('creds.json', '.'),
-    ],
+    datas=[],
     hiddenimports={hidden_imports},
     hookspath=[],
     hooksconfig={{}},
@@ -166,8 +170,6 @@ def build_for_config(config: BuildConfig) -> bool:
             str(build_dir / "build"),
             "--specpath",
             str(build_dir),
-            "--add-data",
-            "creds.json:.",
             "s3_uploader.py",
         ]
 
