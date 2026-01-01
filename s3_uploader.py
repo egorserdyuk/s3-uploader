@@ -144,6 +144,9 @@ class S3Uploader:
             print(f"{Fore.GREEN}✓ Credentials saved to {self.creds_file}")
             logger.info(f"Credentials file created: {self.creds_file}")
 
+            # Set credentials for immediate use
+            self.credentials = credentials
+
         except Exception as e:
             logger.error(f"Error saving credentials: {e}")
             print(f"{Fore.RED}Error saving credentials: {e}")
